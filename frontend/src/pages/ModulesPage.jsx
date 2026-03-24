@@ -70,7 +70,7 @@ const ModulesPage = () => {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center shadow-md"
+          className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           <span className="text-xl mr-2">+</span>
           Создать модуль
@@ -85,7 +85,7 @@ const ModulesPage = () => {
           <p className="text-gray-600 mb-6">Создайте первый модуль, чтобы начать изучение</p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors font-medium"
+            className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             Создать модуль
           </button>
