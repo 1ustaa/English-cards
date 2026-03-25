@@ -274,38 +274,45 @@ def get_cards_for_review(module_id):
 def get_quiz_data(module_id):
     """
     Данные для теста с выбором варианта.
-    
-    Возвращает карточку + 3 неправильных варианта из того же модуля.
-    
+
+    Возвращает карточку + варианты ответов из того же модуля.
+    Адаптируется под количество карточек в модуле.
+
     Query params:
         card_id: Конкретная карточка для теста (опционально)
     """
     module = Module.query.get_or_404(module_id)
     card_id = request.args.get('card_id', type=int)
-    
+
     cards = module.cards.all()
-    
-    if len(cards) < 4:
+
+    if len(cards) == 0:
         return jsonify({
-            'error': 'Not enough cards for quiz. Need at least 4 cards.'
+            'error': 'В модуле нет карточек. Добавьте карточки перед прохождением теста.',
+            'error_code': 'no_cards'
         }), 400
-    
+
     # Выбираем карточку для вопроса
     if card_id:
         question_card = Card.query.get(card_id)
         if not question_card or question_card.module_id != module_id:
-            return jsonify({'error': 'Card not found in module'}), 404
+            return jsonify({'error': 'Карточка не найдена в модуле'}), 404
     else:
         question_card = random.choice(cards)
-    
-    # Выбираем 3 неправильных варианта
+
+    # Выбираем неправильные варианты (все остальные карточки)
     other_cards = [c for c in cards if c.id != question_card.id]
-    wrong_options = random.sample(other_cards, min(3, len(other_cards)))
+    
+    # Если карточек больше 3, выбираем случайно 3, иначе берём все доступные
+    if len(other_cards) >= 3:
+        wrong_options = random.sample(other_cards, 3)
+    else:
+        wrong_options = other_cards
     
     # Формируем варианты ответов
     options = wrong_options + [question_card]
     random.shuffle(options)
-    
+
     return jsonify({
         'question': {
             'card_id': question_card.id,
@@ -318,7 +325,9 @@ def get_quiz_data(module_id):
                 'definition': c.definition
             } for c in options
         ],
-        'correct_answer': question_card.id
+        'correct_answer': question_card.id,
+        'total_options': len(options),
+        'message': len(options) < 4 and 'Мало карточек в модуле. Для лучшего теста добавьте ещё карточек.' or None
     })
 
 

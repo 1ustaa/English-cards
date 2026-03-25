@@ -7,6 +7,8 @@ const QuizPage = () => {
   const { id } = useParams();
   const [quizData, setQuizData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [moduleExists, setModuleExists] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
   const [score, setScore] = useState({ correct: 0, total: 0 });
@@ -19,9 +21,25 @@ const QuizPage = () => {
   const loadQuiz = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await getQuizData(id);
-      setQuizData(data);
+      
+      // Проверяем есть ли ошибка в ответе
+      if (data.error) {
+        // Если модуль не найден, показываем понятную ошибку
+        if (data.error === 'Not Found' || data.error.includes('404')) {
+          setError(`Модуль не найден. Возможно, он был удалён.`);
+          setModuleExists(false);
+        } else {
+          setError(data.error);
+        }
+        setQuizData(null);
+      } else {
+        setQuizData(data);
+        setModuleExists(true);
+      }
     } catch (err) {
+      setError('Не удалось загрузить тест. Проверьте подключение к серверу.');
       console.error('Error loading quiz:', err);
     } finally {
       setLoading(false);
@@ -61,6 +79,51 @@ const QuizPage = () => {
 
   if (loading) {
     return <LoadingSpinner text="Загрузка теста..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <span className="text-6xl mb-4 block">⚠️</span>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Ошибка загрузки теста</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex flex-col space-y-3 justify-center">
+            <Link
+              to="/"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md"
+            >
+              📋 К списку модулей
+            </Link>
+            {moduleExists && (
+              <Link
+                to={`/module/${id}/edit`}
+                className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md"
+              >
+                ➕ Добавить карточки
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!quizData) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <span className="text-6xl mb-4 block">❌</span>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Тест недоступен</h1>
+          <Link
+            to={`/module/${id}`}
+            className="text-primary-600 hover:underline"
+          >
+            Вернуться к модулю
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (finished) {
