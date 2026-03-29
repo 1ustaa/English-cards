@@ -17,6 +17,36 @@ const ModulePage = () => {
     loadModule();
   }, [id]);
 
+  // Горячие клавиши
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Игнорируем если фокус на input/textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      switch (e.code) {
+        case 'ArrowRight':
+          e.preventDefault();
+          handleNext();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          handlePrev();
+          break;
+        case 'Space':
+          e.preventDefault();
+          handleFlip();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentCardIndex, isFlipped, module]);
+
   const loadModule = async () => {
     try {
       setLoading(true);
@@ -30,21 +60,53 @@ const ModulePage = () => {
   };
 
   const handleNext = () => {
-    if (module && currentCardIndex < module.cards.length - 1) {
-      setCurrentCardIndex(prev => prev + 1);
+    if (module && module.cards.length > 0) {
+      // Круговая навигация - если последняя карточка, переходим к первой
+      setCurrentCardIndex(prev => (prev + 1) % module.cards.length);
       setIsFlipped(false);
     }
   };
 
   const handlePrev = () => {
-    if (currentCardIndex > 0) {
-      setCurrentCardIndex(prev => prev - 1);
+    if (module && module.cards.length > 0) {
+      // Круговая навигация - если первая карточка, переходим к последней
+      setCurrentCardIndex(prev => (prev - 1 + module.cards.length) % module.cards.length);
       setIsFlipped(false);
     }
   };
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
+  };
+
+  const handleSpeak = (e) => {
+    e.stopPropagation(); // Чтобы не переворачивать карточку
+    
+    if (!currentCard?.term) {
+      toast.error('Нет слова для произношения');
+      return;
+    }
+    
+    if ('speechSynthesis' in window) {
+      // Отменяем предыдущее воспроизведение если есть
+      speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(currentCard.term);
+      utterance.lang = 'en-US'; // Английский язык
+      utterance.rate = 0.8; // Медленнее для лучшего восприятия
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      // Обработка ошибок
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event);
+        toast.error('Ошибка воспроизведения');
+      };
+      
+      speechSynthesis.speak(utterance);
+    } else {
+      toast.error('Ваш браузер не поддерживает синтез речи. Попробуйте Chrome или Edge.');
+    }
   };
 
   const handleDelete = async () => {
@@ -111,48 +173,17 @@ const ModulePage = () => {
         </div>
       </div>
 
-      {/* Кнопки режимов */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <Link
-          to={`/module/${id}`}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-center font-medium"
-        >
-          📇 Карточки
-        </Link>
-        <Link
-          to={`/module/${id}/study`}
-          className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-md text-center font-medium"
-        >
-          🔊 Заучивание
-        </Link>
-        <Link
-          to={`/module/${id}/quiz`}
-          className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md text-center font-medium"
-        >
-          📝 Тест
-        </Link>
-        <button className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-4 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all shadow-md text-center font-medium">
-          ⊞ Блоки
-        </button>
-        <button className="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-6 py-4 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all shadow-md text-center font-medium">
-          🚀 Blast
-        </button>
-        <button className="bg-gradient-to-r from-teal-500 to-teal-600 text-white px-6 py-4 rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all shadow-md text-center font-medium">
-          🔀 Подбор
-        </button>
-      </div>
-
       {/* Область карточек */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <button className="text-gray-500 hover:text-gray-700 text-sm flex items-center space-x-1">
-            <span>💡</span>
-            <span>Показать подсказку</span>
-          </button>
-          <div className="flex space-x-2">
-            <button className="text-gray-400 hover:text-gray-600">✏️</button>
-            <button className="text-gray-400 hover:text-gray-600">🔊</button>
-            <button className="text-gray-400 hover:text-gray-600">⭐</button>
+        {/* Подсказка о горячих клавишах */}
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center space-x-2 text-xs text-gray-500">
+            <span className="px-2 py-1 bg-gray-100 rounded">←</span>
+            <span className="px-2 py-1 bg-gray-100 rounded">→</span>
+            <span>листать</span>
+            <span className="mx-2">•</span>
+            <span className="px-3 py-1 bg-gray-100 rounded">Пробел</span>
+            <span>перевернуть</span>
           </div>
         </div>
 
@@ -168,7 +199,18 @@ const ModulePage = () => {
             >
               {/* Лицевая сторона */}
               <div className="flip-card-front absolute w-full h-full">
-                <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border-4 border-primary-200 hover:border-primary-400 transition-all flex items-center justify-center p-8">
+                <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border-4 border-primary-200 hover:border-primary-400 transition-all flex items-center justify-center p-8 relative">
+                  {/* Кнопка произношения */}
+                  <button
+                    onClick={handleSpeak}
+                    className="absolute top-4 right-4 p-3 bg-white text-gray-600 rounded-full hover:bg-primary-100 hover:text-primary-600 transition-all shadow-md"
+                    title="Произнести (английский)"
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 11H2a1 1 0 01-1-1V6a1 1 0 011-1h2.586l3.707-5.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-4 uppercase tracking-wide">Термин</p>
                     <p className="text-4xl font-bold text-gray-900">{currentCard?.term}</p>
@@ -179,7 +221,18 @@ const ModulePage = () => {
 
               {/* Обратная сторона */}
               <div className="flip-card-back absolute w-full h-full">
-                <div className="w-full h-full bg-gradient-to-br from-primary-50 to-blue-50 rounded-2xl shadow-xl border-4 border-primary-300 flex items-center justify-center p-8">
+                <div className="w-full h-full bg-gradient-to-br from-primary-50 to-blue-50 rounded-2xl shadow-xl border-4 border-primary-300 flex items-center justify-center p-8 relative">
+                  {/* Кнопка произношения */}
+                  <button
+                    onClick={handleSpeak}
+                    className="absolute top-4 right-4 p-3 bg-white text-primary-600 rounded-full hover:bg-primary-100 hover:text-primary-700 transition-all shadow-md"
+                    title="Произнести (английский)"
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 11H2a1 1 0 01-1-1V6a1 1 0 011-1h2.586l3.707-5.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
                   <div className="text-center">
                     <p className="text-sm text-primary-600 mb-4 uppercase tracking-wide">Определение</p>
                     <p className="text-3xl font-bold text-gray-900">{currentCard?.definition}</p>
@@ -197,19 +250,12 @@ const ModulePage = () => {
         </div>
 
         {/* Навигация */}
-        <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-          <div className="flex items-center space-x-4">
-            <label className="flex items-center space-x-2 text-sm text-gray-600">
-              <input type="checkbox" className="rounded border-gray-300" />
-              <span>Отслеживать прогресс</span>
-            </label>
-          </div>
-
+        <div className="flex items-center justify-center mt-6 pt-6 border-t border-gray-200">
           <div className="flex items-center space-x-2">
             <button 
               onClick={handlePrev}
-              disabled={currentCardIndex === 0}
-              className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all"
+              title="Предыдущая карточка (←)"
             >
               ←
             </button>
@@ -218,43 +264,22 @@ const ModulePage = () => {
             </span>
             <button 
               onClick={handleNext}
-              disabled={currentCardIndex >= totalCards - 1}
-              className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all"
+              title="Следующая карточка (→)"
             >
               →
-            </button>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all">
-              ▶
-            </button>
-            <button className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all">
-              🔀
-            </button>
-            <button className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all">
-              ⚙
-            </button>
-            <button className="p-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all">
-              ⛶
             </button>
           </div>
         </div>
       </div>
 
-      {/* Дополнительные действия */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Кнопка редактирования */}
+      <div className="flex justify-center">
         <Link
           to={`/module/${id}/edit`}
-          className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-6 py-4 rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all shadow-md text-center font-medium"
+          className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-8 py-4 rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all shadow-md text-center font-medium text-lg"
         >
           ✏️ Редактировать карточки
-        </Link>
-        <Link
-          to={`/module/${id}/review`}
-          className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-4 rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-md text-center font-medium"
-        >
-          ⚠️ Работа над ошибками
         </Link>
       </div>
     </div>
