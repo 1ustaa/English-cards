@@ -277,3 +277,267 @@ def get_module_stats(module_id):
         'worst_cards': [c.to_dict() for c in worst_cards],
         'needs_review': needs_review[:10]  # Топ 10
     })
+
+
+@modules_bp.route('/<int:module_id>/study-session', methods=['POST'])
+def start_study_session(module_id):
+    """
+    Начать сессию заучивания.
+    
+    Генерирует вопросы: 2× количество карточек
+    - 50% вопросов: выбор варианта (термин → определение)
+    - 50% вопросов: ручной ввод (определение → термин)
+    
+    Returns:
+        session_id и список вопросов
+    """
+    import random
+    import uuid
+    from datetime import datetime, timezone
+    
+    module = Module.query.get_or_404(module_id)
+    cards = module.cards.all()
+    
+    if len(cards) < 2:
+        return jsonify({
+            'error': 'Недостаточно карточек для заучивания. Минимум 2 карточки.'
+        }), 400
+    
+    # Генерируем вопросы
+    questions = []
+    question_id = 0
+    
+    # Для каждой карточки создаем 2 вопроса
+    for card in cards:
+        # Вопрос 1: Выбор варианта (термин → определение)
+        other_definitions = [c.definition for c in cards if c.id != card.id]
+        wrong_options = random.sample(other_definitions, min(3, len(other_definitions)))
+        options = wrong_options + [card.definition]
+        random.shuffle(options)
+        
+        questions.append({
+            'questionId': question_id,
+            'type': 'multiple_choice',
+            'cardId': card.id,
+            'term': card.term,
+            'definition': card.definition,
+            'correctAnswer': card.definition,
+            'options': options,
+        })
+        question_id += 1
+        
+        # Вопрос 2: Ручной ввод (определение → термин)
+        questions.append({
+            'questionId': question_id,
+            'type': 'text_input',
+            'cardId': card.id,
+            'term': card.term,
+            'definition': card.definition,
+            'correctAnswer': card.term,
+        })
+        question_id += 1
+    
+    # Перемешиваем вопросы
+    random.shuffle(questions)
+    
+    # Создаем сессию (временную, в памяти для MVP)
+    session_id = str(uuid.uuid4())
+    
+    # В будущем можно сохранить сессию в БД
+    # Для MVP храним в app.config (в памяти)
+    if not hasattr(current_app, 'study_sessions'):
+        current_app.study_sessions = {}
+    
+    current_app.study_sessions[session_id] = {
+        'module_id': module_id,
+        'questions': questions,
+        'answers': [],
+        'started_at': datetime.now(timezone.utc),
+    }
+    
+    return jsonify({
+        'sessionId': session_id,
+        'totalQuestions': len(questions),
+        'questions': questions,
+    })
+
+
+@modules_bp.route('/study-session/<session_id>/check', methods=['POST'])
+def check_answer(session_id):
+    """
+    Проверить ответ на вопрос.
+    
+    Body:
+        questionId: ID вопроса
+        answer: Ответ пользователя
+    """
+    data = request.get_json()
+    question_id = data.get('questionId')
+    user_answer = data.get('answer', '').strip()
+    
+    # Получаем сессию
+    if not hasattr(current_app, 'study_sessions'):
+        return jsonify({'error': 'Сессия не найдена'}), 404
+    
+    session = current_app.study_sessions.get(session_id)
+    if not session:
+        return jsonify({'error': 'Сессия не найдена'}), 404
+    
+    # Находим вопрос
+    question = None
+    for q in session['questions']:
+        if q['questionId'] == question_id:
+            question = q
+            break
+    
+    if not question:
+        return jsonify({'error': 'Вопрос не найден'}), 404
+    
+    # Проверяем ответ
+    correct_answer = question['correctAnswer'].strip().lower()
+    user_answer_normalized = user_answer.lower()
+    
+    is_correct = False
+    
+    if question['type'] == 'multiple_choice':
+        is_correct = user_answer_normalized == correct_answer
+    else:  # text_input
+        # Используем расстояние Левенштейна для проверки
+        is_correct = check_text_similarity(user_answer_normalized, correct_answer)
+    
+    # Сохраняем ответ
+    answer_result = {
+        'questionId': question_id,
+        'userAnswer': user_answer,
+        'correctAnswer': question['correctAnswer'],
+        'isCorrect': is_correct,
+    }
+    session['answers'].append(answer_result)
+    
+    return jsonify({
+        'isCorrect': is_correct,
+        'correctAnswer': question['correctAnswer'],
+    })
+
+
+@modules_bp.route('/study-session/<session_id>/hint', methods=['GET'])
+def get_hint(session_id):
+    """
+    Получить подсказку для текущего вопроса.
+    
+    Query params:
+        questionId: ID вопроса
+    """
+    question_id = request.args.get('questionId', type=int)
+    
+    # Получаем сессию
+    if not hasattr(current_app, 'study_sessions'):
+        return jsonify({'error': 'Сессия не найдена'}), 404
+    
+    session = current_app.study_sessions.get(session_id)
+    if not session:
+        return jsonify({'error': 'Сессия не найдена'}), 404
+    
+    # Находим вопрос
+    question = None
+    for q in session['questions']:
+        if q['questionId'] == question_id:
+            question = q
+            break
+    
+    if not question:
+        return jsonify({'error': 'Вопрос не найден'}), 404
+    
+    correct_answer = question['correctAnswer']
+    
+    # Генерируем подсказку: первая буква + количество букв
+    hint = correct_answer[0] if correct_answer else ''
+    hint_display = f"{correct_answer[0]}{'_' * (len(correct_answer) - 1)}" if correct_answer else ''
+    
+    return jsonify({
+        'hint': hint,
+        'hintDisplay': hint_display,
+        'firstLetter': correct_answer[0] if correct_answer else '',
+        'length': len(correct_answer),
+    })
+
+
+@modules_bp.route('/study-session/<session_id>/finish', methods=['POST'])
+def finish_study_session(session_id):
+    """
+    Завершить сессию заучивания.
+    
+    Returns:
+        Статистика сессии
+    """
+    # Получаем сессию
+    if not hasattr(current_app, 'study_sessions'):
+        return jsonify({'error': 'Сессия не найдена'}), 404
+    
+    session = current_app.study_sessions.get(session_id)
+    if not session:
+        return jsonify({'error': 'Сессия не найдена'}), 404
+    
+    # Подсчитываем результаты
+    answers = session['answers']
+    total = len(answers)
+    correct = sum(1 for a in answers if a['isCorrect'])
+    incorrect = total - correct
+    
+    # Сохраняем результаты в StudyLog (опционально)
+    # Для MVP просто возвращаем статистику
+    
+    # Удаляем сессию
+    del current_app.study_sessions[session_id]
+    
+    return jsonify({
+        'total': total,
+        'correct': correct,
+        'incorrect': incorrect,
+        'percentage': round((correct / total * 100), 1) if total > 0 else 0,
+        'answers': answers,
+    })
+
+
+def check_text_similarity(user_answer: str, correct_answer: str) -> bool:
+    """
+    Проверить схожесть текста с допуском опечаток.
+    
+    Использует расстояние Левенштейна.
+    Допускает до 2 ошибок на слово.
+    """
+    # Полное совпадение
+    if user_answer == correct_answer:
+        return True
+    
+    # Вычисляем расстояние Левенштейна
+    distance = levenshtein_distance(user_answer, correct_answer)
+    
+    # Допускаем до 2 ошибок
+    return distance <= 2
+
+
+def levenshtein_distance(s1: str, s2: str) -> int:
+    """
+    Вычислить расстояние Левенштейна между двумя строками.
+    
+    Количество редактирований (вставка, удаление, замена) для превращения s1 в s2.
+    """
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    
+    if len(s2) == 0:
+        return len(s1)
+    
+    previous_row = range(len(s2) + 1)
+    
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    
+    return previous_row[-1]

@@ -274,12 +274,18 @@ const ModulePage = () => {
       </div>
 
       {/* Кнопка редактирования */}
-      <div className="flex justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link
           to={`/module/${id}/edit`}
           className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-8 py-4 rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all shadow-md text-center font-medium text-lg"
         >
           ✏️ Редактировать карточки
+        </Link>
+        <Link
+          to={`/module/${id}/study-session`}
+          className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-md text-center font-medium text-lg"
+        >
+          📖 Заучивание
         </Link>
       </div>
     </div>

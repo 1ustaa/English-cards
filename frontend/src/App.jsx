@@ -6,6 +6,7 @@ import CreateModulePage from './pages/CreateModulePage';
 import QuizPage from './pages/QuizPage';
 import StudyPage from './pages/StudyPage';
 import EditCardsPage from './pages/EditCardsPage';
+import StudySession from './pages/StudySession';
 
 function App() {
   return (
@@ -45,6 +46,9 @@ function App() {
             <StudyPage />
           </>
         } />
+        
+        {/* Заучивание (Study Session) */}
+        <Route path="/module/:id/study-session" element={<StudySession />} />
         
         {/* Тест (Quiz) */}
         <Route path="/module/:id/quiz" element={

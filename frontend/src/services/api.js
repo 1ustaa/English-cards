@@ -195,4 +195,45 @@ export const checkHealth = async () => {
   return response.data;
 };
 
+// ============================================
+// ЗАУЧИВАНИЕ (Study Session)
+// ============================================
+
+/**
+ * Начать сессию заучивания
+ */
+export const startStudySession = async (moduleId) => {
+  const response = await api.post(`/modules/${moduleId}/study-session`, {});
+  return response.data;
+};
+
+/**
+ * Проверить ответ
+ */
+export const checkAnswer = async (sessionId, questionId, answer) => {
+  const response = await api.post(`/modules/study-session/${sessionId}/check`, {
+    questionId,
+    answer,
+  });
+  return response.data;
+};
+
+/**
+ * Получить подсказку
+ */
+export const getHint = async (sessionId, questionId) => {
+  const response = await api.get(`/modules/study-session/${sessionId}/hint`, {
+    params: { questionId },
+  });
+  return response.data;
+};
+
+/**
+ * Завершить сессию
+ */
+export const finishStudySession = async (sessionId) => {
+  const response = await api.post(`/modules/study-session/${sessionId}/finish`, {});
+  return response.data;
+};
+
 export default api;
