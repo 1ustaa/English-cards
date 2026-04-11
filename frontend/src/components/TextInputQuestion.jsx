@@ -1,9 +1,14 @@
-import { useEffect } from 'react';
-
 /**
  * Компонент вопроса с ручным вводом
  */
-const TextInputQuestion = ({ question, textAnswer, onTextAnswer, feedback, showHint, hint }) => {
+const TextInputQuestion = ({ question, textAnswer, onTextAnswer, feedback, showHint, hint, onCheckAnswer }) => {
+  // Обработка клавиши Enter
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !feedback && textAnswer.trim() && onCheckAnswer) {
+      e.preventDefault();
+      onCheckAnswer();
+    }
+  };
   return (
     <div>
       {/* Question */}
@@ -28,14 +33,7 @@ const TextInputQuestion = ({ question, textAnswer, onTextAnswer, feedback, showH
           type="text"
           value={textAnswer}
           onChange={(e) => onTextAnswer(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !feedback && textAnswer.trim()) {
-              e.preventDefault();
-              // Trigger answer check - this will be handled by parent component
-              const event = new CustomEvent('checkAnswer');
-              window.dispatchEvent(event);
-            }
-          }}
+          onKeyDown={handleKeyDown}
           disabled={!!feedback}
           placeholder="Введите термин..."
           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all disabled:bg-gray-100 text-lg"
@@ -46,10 +44,11 @@ const TextInputQuestion = ({ question, textAnswer, onTextAnswer, feedback, showH
         {showHint && hint && (
           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <span className="font-medium">Подсказка:</span> Первая буква: <span className="font-bold">{hint.firstLetter}</span>, 
-              количество букв: <span className="font-bold">{hint.length}</span>
+              <span className="font-medium">Подсказка:</span>
             </p>
-            <p className="text-lg font-mono mt-2 text-yellow-900">{hint.hintDisplay}</p>
+            <p className="text-2xl font-mono mt-2 text-yellow-900 font-bold tracking-wider">
+              {hint.hintDisplay}
+            </p>
           </div>
         )}
       </div>

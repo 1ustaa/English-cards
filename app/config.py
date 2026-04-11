@@ -1,29 +1,56 @@
 import os
 import tempfile
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env (перезаписываем существующие)
+load_dotenv(override=True)
 
 BASE_DIR = Path(__file__).parent.parent  # app/ -> project root
 
 
 class Config:
     """Базовая конфигурация."""
-    
+
     # Security
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     
-    # SQLite (development)
+    # Проверка SECRET_KEY для production
+    @classmethod
+    def validate(cls):
+        """Валидация конфигурации для production."""
+        import warnings
+        if cls.SECRET_KEY == 'dev-secret-key-change-in-production':
+            warnings.warn(
+                '⚠️  WARNING: Используется стандартный SECRET_KEY! '
+                'Установите уникальное значение в .env файле.',
+                UserWarning
+            )
+        
+        db_uri = os.environ.get('DATABASE_URL')
+        if not db_uri:
+            warnings.warn(
+                '⚠️  WARNING: DATABASE_URL не установлен в .env файле.',
+                UserWarning
+            )
+        elif db_uri.startswith('sqlite'):
+            warnings.warn(
+                '⚠️  WARNING: Используется SQLite вместо PostgreSQL! '
+                'Для production настройте DATABASE_URL=postgresql://...',
+                UserWarning
+            )
+
+    # Database
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # PostgreSQL (production) - приоритет
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        'sqlite:///:memory:'
     
-    # ВНИМАНИЕ: Python 3.13 на Windows имеет проблемы с SQLite.
-    # Для разработки используем in-memory БД (данные теряются после перезапуска).
-    # Для продакшена используйте PostgreSQL.
-    # Игнорируем DATABASE_URL из .env для совместимости
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-    
-    # Дополнительные параметры для SQLite
+    # PostgreSQL настройки
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'connect_args': {'timeout': 30},
         'pool_pre_ping': True,  # Проверка соединения перед использованием
+        'pool_recycle': 300,    # Пересоздавать соединения через 5 минут
     }
     
     # PostgreSQL (production - раскомментировать и настроить)
@@ -32,6 +59,9 @@ class Config:
     
     # API
     API_PREFIX = '/api/v1'
+    
+    # CORS настройки
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS') or '*'
     
     # Pagination
     CARDS_PER_PAGE = 20

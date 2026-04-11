@@ -7,14 +7,12 @@ import QuizPage from './pages/QuizPage';
 import StudyPage from './pages/StudyPage';
 import EditCardsPage from './pages/EditCardsPage';
 import StudySession from './pages/StudySession';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Страница модуля - без Header, на весь экран */}
-        <Route path="/module/:id" element={<ModulePage />} />
-        
         {/* Главная страница - список модулей */}
         <Route path="/" element={
           <>
@@ -22,15 +20,18 @@ function App() {
             <ModulesPage />
           </>
         } />
-        
+
         {/* Создание модуля */}
-        <Route path="/create" element={
+        <Route path="/create-module" element={
           <>
             <Header />
             <CreateModulePage />
           </>
         } />
-        
+
+        {/* Страница модуля - без Header, на весь экран */}
+        <Route path="/module/:id" element={<ModulePage />} />
+
         {/* Редактирование карточек */}
         <Route path="/module/:id/edit" element={
           <>
@@ -38,7 +39,7 @@ function App() {
             <EditCardsPage />
           </>
         } />
-        
+
         {/* Страница обучения (Flashcards) */}
         <Route path="/module/:id/study" element={
           <>
@@ -46,10 +47,10 @@ function App() {
             <StudyPage />
           </>
         } />
-        
+
         {/* Заучивание (Study Session) */}
         <Route path="/module/:id/study-session" element={<StudySession />} />
-        
+
         {/* Тест (Quiz) */}
         <Route path="/module/:id/quiz" element={
           <>
@@ -57,6 +58,9 @@ function App() {
             <QuizPage />
           </>
         } />
+
+        {/* 404 - Страница не найдена */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>
   );

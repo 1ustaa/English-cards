@@ -27,11 +27,14 @@ def create_app(config_name: str = None) -> Flask:
     
     if config_name is None:
         config_name = 'default'
-    
+
     app = Flask(__name__, instance_relative_config=True)
-    
+
     # Загрузка конфигурации
     app.config.from_object(config[config_name])
+    
+    # Валидация конфигурации
+    config[config_name].validate()
     
     # Создание папки instance если не существует
     app.instance_path = str(app.instance_path)
@@ -44,24 +47,15 @@ def create_app(config_name: str = None) -> Flask:
     migrate.init_app(app, db)
     
     # CORS для React frontend
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
-    
+    cors_origins = app.config.get('CORS_ORIGINS', '*')
+    CORS(app, resources={r"/api/*": {"origins": cors_origins.split(',')}})
+
     # Регистрация CLI команд
     app.cli.add_command(init_db_command)
-    
+
     # Регистрация Blueprint'ов
     register_blueprints(app)
-    
-    # Инициализация БД для in-memory (только для development)
-    if app.config.get('DEBUG') or ':memory:' in app.config.get('SQLALCHEMY_DATABASE_URI', ''):
-        with app.app_context():
-            db.create_all()
-            # Проверяем есть ли данные, если нет - добавляем тестовые
-            from app.models import User
-            if User.query.count() == 0:
-                from app.commands import seed_data
-                seed_data()
-    
+
     return app
 
 

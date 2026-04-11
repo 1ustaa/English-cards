@@ -44,14 +44,19 @@ def init_db_command(drop: bool, seed: bool) -> None:
 
 def seed_data() -> None:
     """Добавляет тестового пользователя и демо-модуль."""
+
+    import secrets
     
-    # Создаем тестового пользователя
+    # Создаем тестового пользователя со случайным паролем
     user = User.query.filter_by(username='testuser').first()
     if not user:
+        # Генерируем случайный пароль для тестового пользователя
+        temp_password = secrets.token_urlsafe(16)
         user = User(username='testuser', email='test@example.com')
-        user.set_password('password123')
+        user.set_password(temp_password)
         db.session.add(user)
         click.echo(f'  - Создан пользователь: {user.username}')
+        click.echo(f'  - Временный пароль: {temp_password} (сохраните для входа)')
     
     # Создаем демо-модуль с карточками
     module = Module.query.filter_by(title='English Basics').first()

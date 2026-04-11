@@ -450,15 +450,19 @@ def get_hint(session_id):
     
     correct_answer = question['correctAnswer']
     
-    # Генерируем подсказку: первая буква + количество букв
-    hint = correct_answer[0] if correct_answer else ''
-    hint_display = f"{correct_answer[0]}{'_' * (len(correct_answer) - 1)}" if correct_answer else ''
+    # Генерируем подсказку: показываем первую половину слова
+    length = len(correct_answer)
+    half_length = max(1, (length + 1) // 2)  # Округляем вверх
+    visible_part = correct_answer[:half_length]
+    hidden_part = '_' * (length - half_length)
+    hint_display = f"{visible_part}{hidden_part}"
     
     return jsonify({
-        'hint': hint,
+        'hint': visible_part,
         'hintDisplay': hint_display,
-        'firstLetter': correct_answer[0] if correct_answer else '',
-        'length': len(correct_answer),
+        'visiblePart': visible_part,
+        'hiddenLength': length - half_length,
+        'length': length,
     })
 
 

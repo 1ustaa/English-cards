@@ -3,26 +3,21 @@ import { useEffect } from 'react';
 /**
  * Компонент вопроса с выбором варианта
  */
-const MultipleChoiceQuestion = ({ question, selectedAnswer, onSelectAnswer, feedback }) => {
+const MultipleChoiceQuestion = ({ question, selectedAnswer, onSelectAnswer, feedback, onCheckAnswer }) => {
   // Обработка клавиш для Multiple Choice
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (feedback) return; // Если уже есть обратная связь, игнорируем
       
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (e.key === 'Enter' && selectedAnswer && onCheckAnswer) {
         e.preventDefault();
-        // Можно добавить навигацию по вариантам
-      }
-      if (e.key === 'Enter' && selectedAnswer) {
-        e.preventDefault();
-        const event = new CustomEvent('checkAnswer');
-        window.dispatchEvent(event);
+        onCheckAnswer();
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedAnswer, feedback]);
+  }, [selectedAnswer, feedback, onCheckAnswer]);
   return (
     <div>
       {/* Question */}

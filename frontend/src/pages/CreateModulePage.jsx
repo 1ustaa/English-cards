@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createModule } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 const CreateModulePage = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     is_public: false,
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -22,48 +23,48 @@ const CreateModulePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
-      setError('Название модуля обязательно');
+      toast.error('Введите название модуля');
       return;
     }
 
     try {
       setLoading(true);
-      setError(null);
       const newModule = await createModule({
         ...formData,
-        user_id: 1, // Хардкодим для MVP
+        user_id: 1, // TODO: Заменить на реальный user_id после добавления авторизации
       });
-      navigate(`/module/${newModule.id}`);
+      toast.success('Модуль создан');
+      // Переходим к редактированию карточек нового модуля
+      navigate(`/module/${newModule.id}/edit`);
     } catch (err) {
-      setError('Не удалось создать модуль. Попробуйте снова.');
+      toast.error('Не удалось создать модуль');
       console.error('Error creating module:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCancel = () => {
+    navigate('/modules');
+  };
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <Link to="/" className="text-primary-600 hover:underline text-sm">
-        ← Назад к модулям
-      </Link>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Заголовок */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Новый модуль</h1>
+        <p className="text-gray-600 mt-2">Создайте модуль для изучения новых слов</p>
+      </div>
 
-      <div className="mt-6 bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Создать новый модуль</h1>
-
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
+      {/* Форма */}
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
+        <div className="space-y-6">
           {/* Название */}
-          <div className="mb-6">
+          <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-              Название модуля *
+              Название <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -72,13 +73,13 @@ const CreateModulePage = () => {
               value={formData.title}
               onChange={handleChange}
               placeholder="Например: Базовые слова"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-lg"
               autoFocus
             />
           </div>
 
           {/* Описание */}
-          <div className="mb-6">
+          <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
               Описание
             </label>
@@ -89,55 +90,49 @@ const CreateModulePage = () => {
               onChange={handleChange}
               placeholder="Опишите, что входит в этот модуль..."
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
             />
           </div>
 
           {/* Публичность */}
-          <div className="mb-8">
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                name="is_public"
-                checked={formData.is_public}
-                onChange={handleChange}
-                className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <span className="text-gray-700">
-                Сделать модуль публичным (доступен другим пользователям)
-              </span>
-            </label>
+          <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+            <input
+              type="checkbox"
+              id="is_public"
+              name="is_public"
+              checked={formData.is_public}
+              onChange={handleChange}
+              className="w-5 h-5 mt-0.5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+            />
+            <div>
+              <label htmlFor="is_public" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Сделать модуль публичным
+              </label>
+              <p className="text-xs text-gray-500 mt-1">
+                Публичные модули доступны другим пользователям для изучения
+              </p>
+            </div>
           </div>
+        </div>
 
-          {/* Кнопки */}
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Создание...' : 'Создать модуль'}
-            </button>
-            <Link
-              to="/"
-              className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors text-center font-medium"
-            >
-              Отмена
-            </Link>
-          </div>
-        </form>
-      </div>
-
-      {/* Подсказка по импорту CSV */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">📥 Хотите импортировать карточки?</h3>
-        <p className="text-blue-700 text-sm mb-3">
-          После создания модуля вы сможете загрузить карточки из CSV файла.
-        </p>
-        <p className="text-blue-600 text-xs">
-          Формат: <code className="bg-blue-100 px-2 py-1 rounded">Слово;Перевод;Пример</code>
-        </p>
-      </div>
+        {/* Кнопки */}
+        <div className="flex space-x-4 mt-8 pt-6 border-t border-gray-200">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+          >
+            {loading ? 'Создание...' : 'Создать модуль'}
+          </button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+          >
+            Отмена
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

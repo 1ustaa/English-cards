@@ -83,29 +83,15 @@ const ModulePage = () => {
     e.stopPropagation(); // Чтобы не переворачивать карточку
     
     if (!currentCard?.term) {
-      toast.error('Нет слова для произношения');
       return;
     }
     
     if ('speechSynthesis' in window) {
-      // Отменяем предыдущее воспроизведение если есть
-      speechSynthesis.cancel();
-      
       const utterance = new SpeechSynthesisUtterance(currentCard.term);
       utterance.lang = 'en-US'; // Английский язык
-      utterance.rate = 0.8; // Медленнее для лучшего восприятия
+      utterance.rate = 0.9; // Немного медленнее для лучшего восприятия
       utterance.pitch = 1;
-      utterance.volume = 1;
-      
-      // Обработка ошибок
-      utterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event);
-        toast.error('Ошибка воспроизведения');
-      };
-      
       speechSynthesis.speak(utterance);
-    } else {
-      toast.error('Ваш браузер не поддерживает синтез речи. Попробуйте Chrome или Edge.');
     }
   };
 

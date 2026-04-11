@@ -56,18 +56,29 @@ const StudySession = () => {
   const currentQuestion = questions[currentQuestionIndex];
 
   const handleCheckAnswer = async () => {
-    if (!currentQuestion) return;
-    
+    if (!currentQuestion) {
+      console.error('No current question');
+      return;
+    }
+
     const answer = currentQuestion.type === 'multiple_choice' ? selectedAnswer : textAnswer;
     if (!answer) {
+      console.error('No answer provided');
+      return;
+    }
+
+    if (!sessionId) {
+      console.error('No session ID');
       return;
     }
 
     try {
       setIsChecking(true);
+      console.log('Checking answer:', { sessionId, questionId: currentQuestion.questionId, answer });
       const data = await checkAnswer(sessionId, currentQuestion.questionId, answer);
+      console.log('Answer result:', data);
       setFeedback(data);
-      
+
       // Сохраняем ответ
       const newAnswers = [...answers];
       newAnswers[currentQuestionIndex] = {
@@ -89,7 +100,7 @@ const StudySession = () => {
     setTextAnswer('');
     setShowHint(false);
     setHint(null);
-    
+
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
@@ -198,6 +209,7 @@ const StudySession = () => {
               selectedAnswer={selectedAnswer}
               onSelectAnswer={setSelectedAnswer}
               feedback={feedback}
+              onCheckAnswer={handleCheckAnswer}
             />
           ) : (
             <TextInputQuestion
@@ -207,6 +219,7 @@ const StudySession = () => {
               feedback={feedback}
               showHint={showHint}
               hint={hint}
+              onCheckAnswer={handleCheckAnswer}
             />
           )}
 
