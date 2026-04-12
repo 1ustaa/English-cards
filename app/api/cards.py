@@ -7,7 +7,7 @@ Endpoints:
     POST   /cards                  - Создать карточку
     PUT    /cards/<id>             - Обновить карточку
     DELETE /cards/<id>             - Удалить карточку
-    
+
     GET    /cards/study/<module_id>        - Получить карточку для изучения
     POST   /cards/<id>/record      - Записать результат изучения
     GET    /cards/review/<module_id>       - Карточки для работы над ошибками
@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from app.extensions import db
 from app.models import Card, Module, StudyLog, User
+from app.api.auth import token_required
 
 cards_bp = Blueprint('cards', __name__)
 
@@ -30,34 +31,30 @@ cards_bp = Blueprint('cards', __name__)
 # =============================================================================
 
 @cards_bp.route('', methods=['GET'])
-def get_cards():
+@token_required
+def get_cards(current_user):
     """
-    Получить список карточек.
-    
+    Получить список карточек текущего пользователя.
+
     Query params:
         module_id: Фильтр по модулю
-        user_id: Фильтр по владельцу модуля
         page: Номер страницы
         per_page: Количество на странице
     """
     module_id = request.args.get('module_id', type=int)
-    user_id = request.args.get('user_id', type=int)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', current_app.config.get('CARDS_PER_PAGE', 20), type=int)
-    
-    query = Card.query
-    
+
+    # Карточки только текущего пользователя
+    query = Card.query.join(Module).filter(Module.user_id == current_user.id)
+
     if module_id:
-        query = query.filter_by(module_id=module_id)
-    elif user_id:
-        # Получаем все модули пользователя
-        module_ids = [m.id for m in Module.query.filter_by(user_id=user_id).all()]
-        query = query.filter(Card.module_id.in_(module_ids))
-    
+        query = query.filter(Card.module_id == module_id)
+
     query = query.order_by(Card.term.asc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
+
     return jsonify({
         'cards': [c.to_dict() for c in pagination.items],
         'total': pagination.total,
@@ -67,17 +64,24 @@ def get_cards():
 
 
 @cards_bp.route('/<int:card_id>', methods=['GET'])
-def get_card(card_id):
-    """Получить детали карточки."""
+@token_required
+def get_card(current_user, card_id):
+    """Получить детали карточки. Проверяет права доступа."""
     card = Card.query.get_or_404(card_id)
+    
+    # Проверяем что карточка принадлежит пользователю
+    if card.module.user_id != current_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
     return jsonify(card.to_dict())
 
 
 @cards_bp.route('', methods=['POST'])
-def create_card():
+@token_required
+def create_card(current_user):
     """
-    Создать новую карточку.
-    
+    Создать новую карточку. Только для владельца модуля.
+
     Body:
         module_id: ID модуля
         term: Слово/термин
@@ -85,56 +89,71 @@ def create_card():
         example: Пример использования (опционально)
     """
     data = request.get_json()
-    
+
     required_fields = ['module_id', 'term', 'definition']
     missing = [f for f in required_fields if not data.get(f)]
-    
+
     if missing:
         return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
-    
-    # Проверяем существование модуля
+
+    # Проверяем существование модуля и права доступа
     module = Module.query.get(data['module_id'])
     if not module:
         return jsonify({'error': 'Module not found'}), 404
     
+    if module.user_id != current_user.id:
+        return jsonify({'error': 'Only owner can add cards to module'}), 403
+
     card = Card(
         module_id=data['module_id'],
         term=data['term'],
         definition=data['definition'],
         example=data.get('example')
     )
-    
+
     db.session.add(card)
     db.session.commit()
-    
+
     return jsonify(card.to_dict()), 201
 
 
 @cards_bp.route('/<int:card_id>', methods=['PUT'])
-def update_card(card_id):
-    """Обновить карточку."""
+@token_required
+def update_card(current_user, card_id):
+    """Обновить карточку. Только владелец может обновлять."""
     card = Card.query.get_or_404(card_id)
-    data = request.get_json()
     
+    # Проверяем права доступа
+    if card.module.user_id != current_user.id:
+        return jsonify({'error': 'Only owner can update card'}), 403
+    
+    data = request.get_json()
+
     if 'term' in data:
         card.term = data['term']
     if 'definition' in data:
         card.definition = data['definition']
     if 'example' in data:
         card.example = data['example']
-    
+
     db.session.commit()
-    
+
     return jsonify(card.to_dict())
 
 
 @cards_bp.route('/<int:card_id>', methods=['DELETE'])
-def delete_card(card_id):
-    """Удалить карточку."""
+@token_required
+def delete_card(current_user, card_id):
+    """Удалить карточку. Только владелец может удалять."""
     card = Card.query.get_or_404(card_id)
+    
+    # Проверяем права доступа
+    if card.module.user_id != current_user.id:
+        return jsonify({'error': 'Only owner can delete card'}), 403
+    
     db.session.delete(card)
     db.session.commit()
-    
+
     return jsonify({'message': 'Card deleted'})
 
 
@@ -142,22 +161,35 @@ def delete_card(card_id):
 # Режимы обучения
 # =============================================================================
 
+def check_module_access(current_user, module_id):
+    """Проверяет доступ к модулю. Возвращает module или ошибку."""
+    module = Module.query.get(module_id)
+    if not module:
+        return None, ('Module not found', 404)
+    if module.user_id != current_user.id:
+        return None, ('Access denied', 403)
+    return module, None
+
+
 @cards_bp.route('/study/<int:module_id>', methods=['GET'])
-def get_next_card(module_id):
+@token_required
+def get_next_card(current_user, module_id):
     """
     Получить следующую карточку для изучения (Flashcards режим).
-    
+    Только для владельца модуля.
+
     Логика выбора:
     1. Приоритет карточкам с низким % успеха (< 70%)
     2. Затем карточкам которые давно не просматривались (> 7 дней)
     3. Затем новым карточкам (last_reviewed is None)
     4. Иначе случайная карточка
-    
+
     Query params:
         user_id: ID пользователя (для записи в лог)
     """
-    user_id = request.args.get('user_id', type=int)
-    module = Module.query.get_or_404(module_id)
+    module, error = check_module_access(current_user, module_id)
+    if error:
+        return jsonify({'error': error[0]}), error[1]
     
     cards = module.cards.all()
     if not cards:
@@ -195,19 +227,22 @@ def get_next_card(module_id):
 
 
 @cards_bp.route('/<int:card_id>/record', methods=['POST'])
-def record_result(card_id):
+@token_required
+def record_result(current_user, card_id):
     """
     Записать результат изучения карточки.
-    
+
     Body:
-        user_id: ID пользователя
         result: 'success' или 'fail' (или boolean is_success)
     """
     card = Card.query.get_or_404(card_id)
+    
+    # Проверяем права доступа
+    if card.module.user_id != current_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
     data = request.get_json()
-    
-    user_id = data.get('user_id', 1)  # Хардкодим для MVP
-    
+
     # Определяем результат
     if 'is_success' in data:
         is_success = data['is_success']
@@ -215,16 +250,16 @@ def record_result(card_id):
         is_success = data['result'] == 'success'
     else:
         return jsonify({'error': 'Missing result or is_success field'}), 400
-    
+
     # Обновляем статистику карточки
     card.record_result(is_success)
-    
+
     # Создаем запись в журнале
-    log = StudyLog.create(user_id=user_id, card=card, is_success=is_success)
+    log = StudyLog.create(user_id=current_user.id, card=card, is_success=is_success)
     db.session.add(log)
-    
+
     db.session.commit()
-    
+
     return jsonify({
         'message': 'Result recorded',
         'card': card.to_dict(),
@@ -233,17 +268,20 @@ def record_result(card_id):
 
 
 @cards_bp.route('/review/<int:module_id>', methods=['GET'])
-def get_cards_for_review(module_id):
+@token_required
+def get_cards_for_review(current_user, module_id):
     """
-    Работа над ошибками.
-    
+    Работа над ошибками. Только для владельца модуля.
+
     Возвращает карточки с высоким error_count или низким success_rate.
-    
+
     Query params:
         limit: Максимальное количество карточек (default: 10)
         min_errors: Минимальное количество ошибок для включения (default: 1)
     """
-    module = Module.query.get_or_404(module_id)
+    module, error = check_module_access(current_user, module_id)
+    if error:
+        return jsonify({'error': error[0]}), error[1]
     limit = request.args.get('limit', 10, type=int)
     min_errors = request.args.get('min_errors', 1, type=int)
     
@@ -271,9 +309,10 @@ def get_cards_for_review(module_id):
 
 
 @cards_bp.route('/quiz/<int:module_id>', methods=['GET'])
-def get_quiz_data(module_id):
+@token_required
+def get_quiz_data(current_user, module_id):
     """
-    Данные для теста с выбором варианта.
+    Данные для теста с выбором варианта. Только для владельца модуля.
 
     Возвращает карточку + варианты ответов из того же модуля.
     Адаптируется под количество карточек в модуле.
@@ -281,7 +320,9 @@ def get_quiz_data(module_id):
     Query params:
         card_id: Конкретная карточка для теста (опционально)
     """
-    module = Module.query.get_or_404(module_id)
+    module, error = check_module_access(current_user, module_id)
+    if error:
+        return jsonify({'error': error[0]}), error[1]
     card_id = request.args.get('card_id', type=int)
 
     cards = module.cards.all()
@@ -332,16 +373,19 @@ def get_quiz_data(module_id):
 
 
 @cards_bp.route('/<int:module_id>/progress', methods=['GET'])
-def get_learning_progress(module_id):
+@token_required
+def get_learning_progress(current_user, module_id):
     """
-    Получить прогресс обучения по модулю.
-    
+    Получить прогресс обучения по модулю. Только для владельца.
+
     Returns:
         - Сколько карточек изучено
         - Общий % успеха
         - Распределение по уровням сложности
     """
-    module = Module.query.get_or_404(module_id)
+    module, error = check_module_access(current_user, module_id)
+    if error:
+        return jsonify({'error': error[0]}), error[1]
     cards = module.cards.all()
     
     if not cards:
@@ -392,21 +436,24 @@ def get_learning_progress(module_id):
 
 
 @cards_bp.route('/<int:module_id>/study-session', methods=['POST'])
-def start_study_session(module_id):
+@token_required
+def start_study_session(current_user, module_id):
     """
-    Начать сессию заучивания.
-    
+    Начать сессию заучивания. Только для владельца модуля.
+
     Генерирует вопросы: 2× количество карточек
     - 50% вопросов: выбор варианта (термин → определение)
     - 50% вопросов: ручной ввод (определение → термин)
-    
+
     Returns:
         session_id и список вопросов
     """
     import random
     import uuid
-    
-    module = Module.query.get_or_404(module_id)
+
+    module, error = check_module_access(current_user, module_id)
+    if error:
+        return jsonify({'error': error[0]}), error[1]
     cards = module.cards.all()
     
     if len(cards) < 2:
@@ -474,10 +521,11 @@ def start_study_session(module_id):
 
 
 @cards_bp.route('/study-session/<session_id>/check', methods=['POST'])
-def check_answer(session_id):
+@token_required
+def check_answer(current_user, session_id):
     """
     Проверить ответ на вопрос.
-    
+
     Body:
         questionId: ID вопроса
         answer: Ответ пользователя
@@ -534,10 +582,11 @@ def check_answer(session_id):
 
 
 @cards_bp.route('/study-session/<session_id>/hint', methods=['GET'])
-def get_hint(session_id):
+@token_required
+def get_hint(current_user, session_id):
     """
     Получить подсказку для текущего вопроса.
-    
+
     Query params:
         questionId: ID вопроса
     """
@@ -576,10 +625,11 @@ def get_hint(session_id):
 
 
 @cards_bp.route('/study-session/<session_id>/finish', methods=['POST'])
-def finish_study_session(session_id):
+@token_required
+def finish_study_session(current_user, session_id):
     """
     Завершить сессию заучивания.
-    
+
     Returns:
         Статистика сессии
     """

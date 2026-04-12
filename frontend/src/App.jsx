@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Header from './components/Header';
 import ModulesPage from './pages/ModulesPage';
 import ModulePage from './pages/ModulePage';
@@ -7,62 +9,78 @@ import QuizPage from './pages/QuizPage';
 import StudyPage from './pages/StudyPage';
 import EditCardsPage from './pages/EditCardsPage';
 import StudySession from './pages/StudySession';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Главная страница - список модулей */}
-        <Route path="/" element={
-          <>
-            <Header />
-            <ModulesPage />
-          </>
-        } />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Публичные страницы - Login и Register */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-        {/* Создание модуля */}
-        <Route path="/create-module" element={
-          <>
-            <Header />
-            <CreateModulePage />
-          </>
-        } />
+          {/* Главная страница - список модулей (защищена) */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Header />
+              <ModulesPage />
+            </ProtectedRoute>
+          } />
 
-        {/* Страница модуля - без Header, на весь экран */}
-        <Route path="/module/:id" element={<ModulePage />} />
+          {/* Создание модуля (защищена) */}
+          <Route path="/create-module" element={
+            <ProtectedRoute>
+              <Header />
+              <CreateModulePage />
+            </ProtectedRoute>
+          } />
 
-        {/* Редактирование карточек */}
-        <Route path="/module/:id/edit" element={
-          <>
-            <Header />
-            <EditCardsPage />
-          </>
-        } />
+          {/* Страница модуля - без Header, на весь экран (защищена) */}
+          <Route path="/module/:id" element={
+            <ProtectedRoute>
+              <ModulePage />
+            </ProtectedRoute>
+          } />
 
-        {/* Страница обучения (Flashcards) */}
-        <Route path="/module/:id/study" element={
-          <>
-            <Header />
-            <StudyPage />
-          </>
-        } />
+          {/* Редактирование карточек (защищена) */}
+          <Route path="/module/:id/edit" element={
+            <ProtectedRoute>
+              <Header />
+              <EditCardsPage />
+            </ProtectedRoute>
+          } />
 
-        {/* Заучивание (Study Session) */}
-        <Route path="/module/:id/study-session" element={<StudySession />} />
+          {/* Страница обучения (Flashcards) (защищена) */}
+          <Route path="/module/:id/study" element={
+            <ProtectedRoute>
+              <Header />
+              <StudyPage />
+            </ProtectedRoute>
+          } />
 
-        {/* Тест (Quiz) */}
-        <Route path="/module/:id/quiz" element={
-          <>
-            <Header />
-            <QuizPage />
-          </>
-        } />
+          {/* Заучивание (Study Session) (защищена) */}
+          <Route path="/module/:id/study-session" element={
+            <ProtectedRoute>
+              <StudySession />
+            </ProtectedRoute>
+          } />
 
-        {/* 404 - Страница не найдена */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Router>
+          {/* Тест (Quiz) (защищена) */}
+          <Route path="/module/:id/quiz" element={
+            <ProtectedRoute>
+              <Header />
+              <QuizPage />
+            </ProtectedRoute>
+          } />
+
+          {/* 404 - Страница не найдена */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

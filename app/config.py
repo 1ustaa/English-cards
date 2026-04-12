@@ -66,6 +66,9 @@ class Config:
     # Pagination
     CARDS_PER_PAGE = 20
     MODULES_PER_PAGE = 10
+
+    # JWT Authentication
+    JWT_EXPIRATION_HOURS = 24  # Токен действителен 24 часа
     
     # CSV Import
     MAX_CSV_FILE_SIZE = 5 * 1024 * 1024  # 5MB

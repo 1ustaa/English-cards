@@ -11,6 +11,29 @@ const api = axios.create({
   },
 });
 
+// Interceptor для добавления JWT токена
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Interceptor для обработки 401 ошибок
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Токен невалиден, удаляем
+      localStorage.removeItem('token');
+      // Перенаправляем на login
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 // ============================================
 // МОДУЛИ (Modules/Decks)
 // ============================================
@@ -58,8 +81,8 @@ export const deleteModule = async (moduleId) => {
 /**
  * Клонировать модуль
  */
-export const cloneModule = async (moduleId, userId = 1) => {
-  const response = await api.post(`/modules/${moduleId}/clone`, { user_id: userId });
+export const cloneModule = async (moduleId) => {
+  const response = await api.post(`/modules/${moduleId}/clone`);
   return response.data;
 };
 
@@ -138,19 +161,16 @@ export const deleteCard = async (cardId) => {
 /**
  * Получить карточку для изучения (Flashcards)
  */
-export const getStudyCard = async (moduleId, userId = 1) => {
-  const response = await api.get(`/cards/study/${moduleId}`, {
-    params: { user_id: userId },
-  });
+export const getStudyCard = async (moduleId) => {
+  const response = await api.get(`/cards/study/${moduleId}`);
   return response.data;
 };
 
 /**
  * Записать результат изучения
  */
-export const recordResult = async (cardId, isSuccess, userId = 1) => {
+export const recordResult = async (cardId, isSuccess) => {
   const response = await api.post(`/cards/${cardId}/record`, {
-    user_id: userId,
     is_success: isSuccess,
   });
   return response.data;

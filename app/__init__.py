@@ -61,15 +61,17 @@ def create_app(config_name: str = None) -> Flask:
 
 def register_blueprints(app: Flask) -> None:
     """Регистрирует все Blueprint'ы приложения."""
-    
+
     from app.api.modules import modules_bp
     from app.api.cards import cards_bp
-    
+    from app.api.auth import auth_bp
+
     # Получаем префикс из конфига
     api_prefix = app.config.get('API_PREFIX', '/api/v1')
-    
+
     app.register_blueprint(modules_bp, url_prefix=f'{api_prefix}/modules')
     app.register_blueprint(cards_bp, url_prefix=f'{api_prefix}/cards')
+    app.register_blueprint(auth_bp, url_prefix=f'{api_prefix}/auth')
     
     # Health check endpoint
     @app.route('/health')

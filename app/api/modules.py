@@ -16,39 +16,37 @@ from typing import Any, Dict
 
 from app.extensions import db
 from app.models import Module, Card, User
+from app.api.auth import token_required
 
 modules_bp = Blueprint('modules', __name__)
 
 
 @modules_bp.route('', methods=['GET'])
-def get_modules():
+@token_required
+def get_modules(current_user):
     """
-    Получить список модулей.
-    
+    Получить список модулей текущего пользователя.
+
     Query params:
-        user_id: Фильтр по владельцу
         is_public: Фильтр по публичности (true/false)
         page: Номер страницы
         per_page: Количество на странице
     """
-    user_id = request.args.get('user_id', type=int)
     is_public = request.args.get('is_public')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', current_app.config.get('MODULES_PER_PAGE', 10), type=int)
-    
-    query = Module.query
-    
-    if user_id:
-        query = query.filter_by(user_id=user_id)
-    
+
+    # Показываем только модули текущего пользователя
+    query = Module.query.filter_by(user_id=current_user.id)
+
     if is_public is not None:
         query = query.filter_by(is_public=is_public.lower() == 'true')
-    
-    # Сортировка: сначала свои, потом публичные, по дате обновления
+
+    # Сортировка: по дате обновления
     query = query.order_by(Module.updated_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
+
     return jsonify({
         'modules': [m.to_dict() for m in pagination.items],
         'total': pagination.total,
@@ -58,91 +56,110 @@ def get_modules():
 
 
 @modules_bp.route('/<int:module_id>', methods=['GET'])
-def get_module(module_id):
-    """Получить детали модуля с карточками."""
+@token_required
+def get_module(current_user, module_id):
+    """Получить детали модуля с карточками. Проверяет права доступа."""
     module = Module.query.get_or_404(module_id)
+    
+    # Проверяем что модуль принадлежит пользователю или является публичным
+    if module.user_id != current_user.id and not module.is_public:
+        return jsonify({'error': 'Access denied'}), 403
+    
     return jsonify(module.to_dict(include_cards=True))
 
 
 @modules_bp.route('', methods=['POST'])
-def create_module():
+@token_required
+def create_module(current_user):
     """
     Создать новый модуль.
-    
+
     Body:
         title: Название модуля
         description: Описание (опционально)
-        user_id: ID владельца (пока хардкодим)
         is_public: Публичный или нет (default: false)
     """
     data = request.get_json()
-    
+
     if not data or not data.get('title'):
         return jsonify({'error': 'Title is required'}), 400
-    
+
     module = Module(
         title=data['title'],
         description=data.get('description', ''),
-        user_id=data.get('user_id', 1),  # Хардкодим user_id=1 для MVP
+        user_id=current_user.id,
         is_public=data.get('is_public', False)
     )
-    
+
     db.session.add(module)
     db.session.commit()
-    
+
     return jsonify(module.to_dict()), 201
 
 
 @modules_bp.route('/<int:module_id>', methods=['PUT'])
-def update_module(module_id):
-    """Обновить модуль."""
+@token_required
+def update_module(current_user, module_id):
+    """Обновить модуль. Только владелец может обновлять."""
     module = Module.query.get_or_404(module_id)
-    data = request.get_json()
     
+    # Проверяем права доступа
+    if module.user_id != current_user.id:
+        return jsonify({'error': 'Only owner can update module'}), 403
+    
+    data = request.get_json()
+
     if 'title' in data:
         module.title = data['title']
     if 'description' in data:
         module.description = data['description']
     if 'is_public' in data:
         module.is_public = data['is_public']
-    
+
     db.session.commit()
-    
+
     return jsonify(module.to_dict())
 
 
 @modules_bp.route('/<int:module_id>', methods=['DELETE'])
-def delete_module(module_id):
-    """Удалить модуль."""
+@token_required
+def delete_module(current_user, module_id):
+    """Удалить модуль. Только владелец может удалять."""
     module = Module.query.get_or_404(module_id)
+    
+    # Проверяем права доступа
+    if module.user_id != current_user.id:
+        return jsonify({'error': 'Only owner can delete module'}), 403
+    
     db.session.delete(module)
     db.session.commit()
-    
+
     return jsonify({'message': 'Module deleted'})
 
 
 @modules_bp.route('/<int:module_id>/clone', methods=['POST'])
-def clone_module(module_id):
+@token_required
+def clone_module(current_user, module_id):
     """
     Клонировать модуль.
-    
+
     Создает копию модуля со всеми карточками для текущего пользователя.
     Нужно для изоляции прогресса обучения.
     """
     source = Module.query.get_or_404(module_id)
     data = request.get_json() or {}
-    
-    # Создаем клон модуля
+
+    # Создаем клон модуля для текущего пользователя
     clone = Module(
         title=f"{source.title} (copy)",
         description=source.description,
-        user_id=data.get('user_id', 1),  # Хардкодим для MVP
+        user_id=current_user.id,
         is_public=False,  # Клон всегда приватный
         cloned_from_id=source.id
     )
     db.session.add(clone)
     db.session.flush()  # Получаем ID клона
-    
+
     # Копируем карточки
     for card in source.cards.all():
         card_clone = Card(
@@ -154,30 +171,35 @@ def clone_module(module_id):
             success_count=0
         )
         db.session.add(card_clone)
-    
+
     db.session.commit()
-    
+
     return jsonify(clone.to_dict()), 201
 
 
 @modules_bp.route('/<int:module_id>/import', methods=['POST'])
-def import_csv(module_id):
+@token_required
+def import_csv(current_user, module_id):
     """
-    Импорт карточек из CSV файла.
-    
+    Импорт карточек из CSV файла. Только владелец модуля может импортировать.
+
     Формат CSV: "Слово;Перевод;Пример"
     Пример:
         Apple;Яблоко;I eat an apple
         Book;Книга;She reads a book
-    
+
     Query params:
         has_header: Есть ли заголовок в файле (default: false)
     """
     import csv
     import io
-    
+
     module = Module.query.get_or_404(module_id)
     
+    # Проверяем права доступа
+    if module.user_id != current_user.id:
+        return jsonify({'error': 'Only owner can import cards'}), 403
+
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
     
@@ -245,16 +267,21 @@ def import_csv(module_id):
 
 
 @modules_bp.route('/<int:module_id>/stats', methods=['GET'])
-def get_module_stats(module_id):
+@token_required
+def get_module_stats(current_user, module_id):
     """
-    Получить статистику модуля.
-    
+    Получить статистику модуля. Только для владельца.
+
     Returns:
         - Общее количество карточек
         - Процент успеха
         - Карточки с наибольшим количеством ошибок
     """
     module = Module.query.get_or_404(module_id)
+    
+    # Проверяем права доступа
+    if module.user_id != current_user.id:
+        return jsonify({'error': 'Access denied'}), 403
     
     cards = module.cards.all()
     total_cards = len(cards)
@@ -280,22 +307,28 @@ def get_module_stats(module_id):
 
 
 @modules_bp.route('/<int:module_id>/study-session', methods=['POST'])
-def start_study_session(module_id):
+@token_required
+def start_study_session(current_user, module_id):
     """
-    Начать сессию заучивания.
-    
+    Начать сессию заучивания. Только для владельца модуля.
+
     Генерирует вопросы: 2× количество карточек
     - 50% вопросов: выбор варианта (термин → определение)
     - 50% вопросов: ручной ввод (определение → термин)
-    
+
     Returns:
         session_id и список вопросов
     """
     import random
     import uuid
     from datetime import datetime, timezone
-    
+
     module = Module.query.get_or_404(module_id)
+    
+    # Проверяем права доступа
+    if module.user_id != current_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
     cards = module.cards.all()
     
     if len(cards) < 2:

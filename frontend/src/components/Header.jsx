@@ -1,12 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const isActive = (path) => {
-    return location.pathname === path 
-      ? 'text-primary-600 font-semibold bg-primary-50 px-3 py-2 rounded-md' 
+    return location.pathname === path
+      ? 'text-primary-600 font-semibold bg-primary-50 px-3 py-2 rounded-md'
       : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50 px-3 py-2 rounded-md transition-colors';
+  };
+
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -22,11 +28,25 @@ const Header = () => {
             </div>
           </Link>
 
-          {/* Навигация */}
-          <nav className="flex items-center space-x-2">
+          {/* Навигация и пользователь */}
+          <nav className="flex items-center space-x-4">
             <Link to="/" className={isActive('/')}>
               📋 Модули
             </Link>
+            
+            {user && (
+              <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-200">
+                <span className="text-sm text-gray-700 font-medium">
+                  {user.username}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-md transition-colors"
+                >
+                  Выйти
+                </button>
+              </div>
+            )}
           </nav>
         </div>
       </div>
