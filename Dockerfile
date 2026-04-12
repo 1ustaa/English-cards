@@ -20,8 +20,11 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем код
+# Копируем код (включая migrations/)
 COPY . .
+
+# Проверяем что migrations на месте
+RUN ls -la /app/migrations/
 
 # Собираем фронтенд
 WORKDIR /app/frontend
