@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 /**
  * Экран результатов сессии
  */
-const ResultsScreen = ({ correct, total, answers, onRestart, moduleId }) => {
+const ResultsScreen = ({ correct, total, _answers, onRestart, moduleId }) => {
   const percentage = Math.round((correct / total) * 100);
   
   let message = '';

@@ -119,21 +119,14 @@ const ModuleCard = ({ module }) => {
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                 onClick={closeMenu}
               >
-                ✏️ Редактировать карточки
+                ✏️ Редактировать модуль
               </Link>
               <Link
-                to={`/module/${module.id}/study`}
+                to={`/module/${module.id}/study-session`}
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                 onClick={closeMenu}
               >
                 🎴 Учить
-              </Link>
-              <Link
-                to={`/module/${module.id}/quiz`}
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                onClick={closeMenu}
-              >
-                📝 Пройти тест
               </Link>
             </div>
           </div>

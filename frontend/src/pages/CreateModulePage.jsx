@@ -47,7 +47,7 @@ const CreateModulePage = () => {
   };
 
   const handleCancel = () => {
-    navigate('/modules');
+    navigate('/');
   };
 
   return (

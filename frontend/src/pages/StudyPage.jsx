@@ -7,7 +7,7 @@ import { getModule, getStudyCard, recordResult } from '../services/api';
 const StudyPage = () => {
   const { id } = useParams();
   const [module, setModule] = useState(null);
-  const [studyCard, setStudyCard] = useState(null);
+  const [studyCard, setStudyCard] = useState(undefined); // undefined - загружается, null - нет карточек
   const [isFlipped, setIsFlipped] = useState(false);
   const [studyProgress, setStudyProgress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,6 +16,7 @@ const StudyPage = () => {
   useEffect(() => {
     loadModule();
     loadStudyCard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadModule = async () => {
@@ -24,20 +25,26 @@ const StudyPage = () => {
       setModule(data);
     } catch (err) {
       console.error('Error loading module:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const loadStudyCard = async () => {
     try {
       const data = await getStudyCard(id);
-      setStudyCard(data.card);
+      if (data.card === null || data.card === undefined) {
+        // Если карточек нет или все изучены
+        setStudyCard(null);
+      } else {
+        setStudyCard(data.card);
+      }
       setStudyProgress(data.progress);
       setIsFlipped(false);
       setResult(null);
     } catch (err) {
       console.error('Error loading study card:', err);
+      setStudyCard(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,27 +76,27 @@ const StudyPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-100">
       {/* Верхняя панель */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <Link to={`/module/${id}`} className="text-primary-600 hover:underline flex items-center">
-              <span className="mr-2">←</span> Назад к модулю
+            <Link to={`/module/${id}`} className="text-primary-600 hover:underline flex items-center text-sm">
+              <span className="mr-2">←</span> <span className="hidden sm:inline">Назад к модулю</span><span className="sm:hidden">Назад</span>
             </Link>
             {module && (
-              <h1 className="text-xl font-semibold text-gray-900">{module.title}</h1>
+              <h1 className="text-base sm:text-xl font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-none">{module.title}</h1>
             )}
-            <div className="w-20"></div> {/* Для центрирования */}
+            <div className="w-12 sm:w-20"></div>
           </div>
         </div>
       </div>
 
       {/* Основной контент */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 pb-24 sm:pb-8">
         {/* Прогресс */}
         {studyProgress && (
-          <div className="mb-6 text-center">
-            <div className="inline-block bg-white rounded-full px-6 py-2 shadow-md">
-              <span className="text-gray-600">Прогресс: </span>
-              <span className="font-bold text-primary-600">
+          <div className="mb-4 sm:mb-6 text-center">
+            <div className="inline-block bg-white rounded-full px-4 py-2 sm:px-6 sm:py-2 shadow-md">
+              <span className="text-xs sm:text-sm text-gray-600">Прогресс: </span>
+              <span className="font-bold text-primary-600 text-sm sm:text-base">
                 {studyProgress.reviewed} / {studyProgress.total}
               </span>
             </div>
@@ -97,19 +104,19 @@ const StudyPage = () => {
         )}
 
         {/* Карточка */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-4 sm:mb-8">
           {studyCard ? (
             <div className="w-full max-w-md">
               <Flashcard card={studyCard} isFlipped={isFlipped} onFlip={handleFlip} />
-              
+
               {/* Кнопки результатов */}
               {isFlipped && (
-                <div className="flex justify-center space-x-4 mt-8">
+                <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 sm:space-x-4 mt-6 sm:mt-8">
                   <button
                     onClick={() => handleResult(false)}
-                    className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 ${
-                      result === 'fail' 
-                        ? 'bg-red-700 text-white' 
+                    className={`flex-1 sm:flex-none px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold sm:font-bold text-base sm:text-lg transition-all transform hover:scale-105 ${
+                      result === 'fail'
+                        ? 'bg-red-700 text-white'
                         : 'bg-red-500 text-white hover:bg-red-600'
                     }`}
                   >
@@ -117,9 +124,9 @@ const StudyPage = () => {
                   </button>
                   <button
                     onClick={() => handleResult(true)}
-                    className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 ${
-                      result === 'success' 
-                        ? 'bg-green-700 text-white' 
+                    className={`flex-1 sm:flex-none px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold sm:font-bold text-base sm:text-lg transition-all transform hover:scale-105 ${
+                      result === 'success'
+                        ? 'bg-green-700 text-white'
                         : 'bg-green-500 text-white hover:bg-green-600'
                     }`}
                   >
@@ -127,58 +134,70 @@ const StudyPage = () => {
                   </button>
                 </div>
               )}
-              
+
               {!isFlipped && (
-                <div className="text-center mt-8">
+                <div className="text-center mt-6 sm:mt-8">
                   <button
                     onClick={handleFlip}
-                    className="px-8 py-4 bg-primary-600 text-white rounded-xl font-bold text-lg hover:bg-primary-700 transition-all transform hover:scale-105 shadow-lg"
+                    className="px-6 py-3 sm:px-8 sm:py-4 bg-primary-600 text-white rounded-xl font-semibold sm:font-bold text-base sm:text-lg hover:bg-primary-700 transition-all transform hover:scale-105 shadow-lg"
                   >
                     🔄 Перевернуть карточку
                   </button>
-                  <p className="text-gray-500 mt-4 text-sm">
+                  <p className="text-gray-500 mt-3 sm:mt-4 text-xs sm:text-sm">
                     Или нажмите на карточку
                   </p>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="text-center py-16">
-              <span className="text-6xl mb-4 block">🎉</span>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Все карточки изучены!</h2>
-              <p className="text-gray-600 mb-6">Отличная работа! Хотите начать заново?</p>
+          ) : studyProgress && studyProgress.total === 0 ? (
+            <div className="text-center py-12 sm:py-16">
+              <span className="text-5xl sm:text-6xl mb-3 sm:mb-4 block">📚</span>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">В модуле нет карточек</h2>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Добавьте карточки в модуль, чтобы начать обучение</p>
+              <Link
+                to={`/module/${id}/edit`}
+                className="bg-primary-600 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base font-medium inline-block"
+              >
+                ✏️ Редактировать модуль
+              </Link>
+            </div>
+          ) : studyCard === null ? (
+            <div className="text-center py-12 sm:py-16">
+              <span className="text-5xl sm:text-6xl mb-3 sm:mb-4 block">🎉</span>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Все карточки изучены!</h2>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Отличная работа! Хотите начать заново?</p>
               <button
                 onClick={loadStudyCard}
-                className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                className="bg-primary-600 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base font-medium"
               >
                 Начать заново
               </button>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Статистика */}
         {studyProgress && studyProgress.total > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 text-center">Статистика</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-center">Статистика</h3>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
               <div>
-                <p className="text-3xl font-bold text-primary-600">
+                <p className="text-2xl sm:text-3xl font-bold text-primary-600">
                   {studyProgress.total}
                 </p>
-                <p className="text-gray-500 text-sm">Всего карточек</p>
+                <p className="text-gray-500 text-xs sm:text-sm">Всего карточек</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-green-600">
+                <p className="text-2xl sm:text-3xl font-bold text-green-600">
                   {studyProgress.reviewed}
                 </p>
-                <p className="text-gray-500 text-sm">Изучено</p>
+                <p className="text-gray-500 text-xs sm:text-sm">Изучено</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-orange-600">
+                <p className="text-2xl sm:text-3xl font-bold text-orange-600">
                   {studyProgress.total - studyProgress.reviewed}
                 </p>
-                <p className="text-gray-500 text-sm">Осталось</p>
+                <p className="text-gray-500 text-xs sm:text-sm">Осталось</p>
               </div>
             </div>
           </div>
