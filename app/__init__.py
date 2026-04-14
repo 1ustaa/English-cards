@@ -5,7 +5,8 @@ Application Factory для Flask приложения.
 инициализирует расширения.
 """
 
-from flask import Flask, request
+from pathlib import Path
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 
 from app.config import config
@@ -77,8 +78,31 @@ def register_blueprints(app: Flask) -> None:
     @app.route('/health')
     def health_check():
         return {'status': 'ok', 'service': 'english-cards-api'}
+
+    # Раздача фронтенда (production)
+    frontend_dist = Path(__file__).parent.parent / 'frontend' / 'dist'
     
-    # Заглушки для favicon.ico и robots.txt (чтобы не было 404 в логах)
+    if frontend_dist.exists():
+        @app.route('/')
+        def index():
+            """Главная страница - фронтенд."""
+            return send_from_directory(frontend_dist, 'index.html')
+        
+        @app.route('/<path:path>')
+        def serve_frontend(path):
+            """
+            Раздаёт статические файлы фронтенда.
+            Для SPA роутинга - возвращает index.html для всех не-API путей.
+            """
+            # Если файл существует - отдаём его
+            file_path = frontend_dist / path
+            if file_path.exists() and file_path.is_file():
+                return send_from_directory(frontend_dist, path)
+            
+            # Иначе отдаём index.html (для React Router)
+            return send_from_directory(frontend_dist, 'index.html')
+
+    # Заглушки для favicon.ico и robots.txt
     @app.route('/favicon.ico')
     def favicon():
         return '', 204
