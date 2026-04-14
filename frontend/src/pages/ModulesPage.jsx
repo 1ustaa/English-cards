@@ -50,31 +50,31 @@ const ModulesPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Заголовок и кнопка создания */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Мои модули</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Мои модули</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             {modules.length} {modules.length === 1 ? 'модуль' : modules.length < 5 ? 'модуля' : 'модулей'}
           </p>
         </div>
         <Link
           to="/create-module"
-          className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all text-sm sm:text-base font-medium flex items-center shadow-md hover:shadow-lg transform hover:scale-105"
         >
-          <span className="text-xl mr-2">+</span>
+          <span className="text-lg sm:text-xl mr-2">+</span>
           Создать модуль
         </Link>
       </div>
 
       {/* Список модулей */}
       {modules.length === 0 ? (
-        <div className="text-center py-16">
-          <span className="text-6xl mb-4 block">📚</span>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Нет модулей</h2>
-          <p className="text-gray-600 mb-6">Создайте первый модуль, чтобы начать изучение</p>
+        <div className="text-center py-12 sm:py-16">
+          <span className="text-5xl sm:text-6xl mb-3 sm:mb-4 block">📚</span>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Нет модулей</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Создайте первый модуль, чтобы начать изучение</p>
           <Link
             to="/create-module"
-            className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium shadow-lg hover:shadow-xl transform hover:scale-105 inline-block"
+            className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all text-sm sm:text-base font-medium shadow-md hover:shadow-lg transform hover:scale-105 inline-block"
           >
             Создать модуль
           </Link>

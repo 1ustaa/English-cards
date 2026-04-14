@@ -50,6 +50,17 @@ body {
   transform: rotateY(180deg);
 }
 
+/* Адаптация карточки для мобильных */
+@media (max-width: 640px) {
+  .flip-card {
+    perspective: 800px;
+  }
+  
+  .flip-card-inner {
+    transition: transform 0.4s;
+  }
+}
+
 /* Анимация для Toast */
 @keyframes slide-in {
   from {

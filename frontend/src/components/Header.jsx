@@ -20,22 +20,18 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Логотип */}
-          <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-            <span className="text-3xl">📚</span>
-            <div>
-              <span className="text-xl font-bold text-gray-900">English Cards</span>
-              <p className="text-xs text-gray-500 -mt-1">Изучение слов</p>
-            </div>
+          <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <span className="text-xl font-bold text-gray-900">Qardly</span>
           </Link>
 
           {/* Навигация и пользователь */}
-          <nav className="flex items-center space-x-4">
+          <nav className="flex items-center space-x-6">
             <Link to="/" className={isActive('/')}>
-              📋 Модули
+              Модули
             </Link>
-            
+
             {user && (
-              <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-200">
+              <div className="flex items-center space-x-4 ml-6 pl-6 border-l border-gray-200">
                 <span className="text-sm text-gray-700 font-medium">
                   {user.username}
                 </span>

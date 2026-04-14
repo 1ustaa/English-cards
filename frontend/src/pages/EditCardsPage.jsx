@@ -201,27 +201,17 @@ const EditCardsPage = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 sm:pb-8">
       {/* Заголовок */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <Link to={`/module/${id}`} className="text-primary-600 hover:underline text-sm">
           ← Назад к модулю
         </Link>
-        <div className="flex justify-between items-center mt-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Редактирование карточек</h1>
-            <p className="text-gray-600 mt-1">
-              {module.title} • {cards.length} карточек
-            </p>
-          </div>
-          <button
-            onClick={handleSaveAll}
-            disabled={saving}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#2563eb', color: 'white' }}
-          >
-            💾 Сохранить все
-          </button>
+        <div className="mt-3 sm:mt-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Редактирование карточек</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {module.title} • {cards.length} карточек
+          </p>
         </div>
       </div>
 
@@ -301,41 +291,29 @@ const EditCardsPage = () => {
 
       {/* Кнопка добавления внизу */}
       {cards.length > 0 && (
-        <div className="mt-8 text-center">
+        <div className="mt-6 sm:mt-8 text-center">
           <button
             onClick={handleAddCard}
-            className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium inline-flex items-center"
+            className="bg-green-600 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base font-medium inline-flex items-center"
           >
-            <span className="text-2xl mr-2">+</span>
+            <span className="text-xl sm:text-2xl mr-2">+</span>
             Добавить карточку
           </button>
         </div>
       )}
 
-      {/* Кнопки прокрутки */}
-      {showScrollDown && (
-        <button
-          onClick={scrollToBottom}
-          className="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all transform hover:scale-110 z-50"
-          title="Прокрутить вниз"
-        >
-          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 10.293a1 1 0 010 1.414l-6 6a1 1 0 01-1.414 0l-6-6a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l4.293-4.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-        </button>
-      )}
-
-      {showScrollUp && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all transform hover:scale-110 z-50"
-          title="Прокрутить вверх"
-        >
-          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-          </svg>
-        </button>
-      )}
+      {/* Фиксированная кнопка "Сохранить все" внизу - видна всегда */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 p-3 sm:p-4">
+        <div className="max-w-3xl mx-auto">
+          <button
+            onClick={handleSaveAll}
+            disabled={saving}
+            className="w-full bg-blue-600 text-white px-4 py-3 sm:px-6 sm:py-4 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-lg font-medium flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? '⏳ Сохранение...' : '💾 Сохранить все'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

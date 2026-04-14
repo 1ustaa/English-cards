@@ -21,20 +21,20 @@ const MultipleChoiceQuestion = ({ question, selectedAnswer, onSelectAnswer, feed
   return (
     <div>
       {/* Question */}
-      <div className="mb-8">
-        <p className="text-sm text-gray-500 uppercase tracking-wide mb-2">ТЕРМИН</p>
-        <h2 className="text-4xl font-bold text-gray-900">{question.term}</h2>
+      <div className="mb-4 sm:mb-8">
+        <p className="text-xs sm:text-sm text-gray-500 uppercase tracking-wide mb-2">ТЕРМИН</p>
+        <h2 className="text-2xl sm:text-4xl font-bold text-gray-900">{question.term}</h2>
       </div>
 
       {/* Options */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {question.options.map((option, index) => {
           const isSelected = selectedAnswer === option;
           const isCorrect = feedback && option === feedback.correctAnswer;
           const isWrong = feedback && isSelected && !isCorrect;
 
           let buttonClass = 'border-2 border-gray-200 hover:border-primary-300 hover:bg-primary-50';
-          
+
           if (feedback) {
             if (isCorrect) {
               buttonClass = 'border-2 border-green-500 bg-green-50';
@@ -50,12 +50,12 @@ const MultipleChoiceQuestion = ({ question, selectedAnswer, onSelectAnswer, feed
               key={index}
               onClick={() => !feedback && onSelectAnswer(option)}
               disabled={!!feedback}
-              className={`w-full p-4 rounded-xl text-left transition-all ${buttonClass} disabled:cursor-not-allowed`}
+              className={`w-full p-3 sm:p-4 rounded-xl text-left transition-all text-sm sm:text-base ${buttonClass} disabled:cursor-not-allowed`}
             >
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-900">{option}</span>
-                {isCorrect && <span className="text-green-600 text-xl">✅</span>}
-                {isWrong && <span className="text-red-600 text-xl">❌</span>}
+                {isCorrect && <span className="text-green-600 text-lg sm:text-xl">✅</span>}
+                {isWrong && <span className="text-red-600 text-lg sm:text-xl">❌</span>}
               </div>
             </button>
           );

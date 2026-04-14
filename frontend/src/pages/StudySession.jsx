@@ -184,7 +184,7 @@ const StudySession = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4">
           <Link to={`/module/${id}`} className="text-primary-600 hover:underline text-sm">
             ← Назад к модулю
           </Link>
@@ -192,7 +192,7 @@ const StudySession = () => {
       </div>
 
       {/* Progress Bar */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-4 sm:py-6">
         <ProgressBar
           current={currentQuestionIndex + 1}
           total={questions.length}
@@ -201,8 +201,8 @@ const StudySession = () => {
       </div>
 
       {/* Question Card */}
-      <div className="max-w-4xl mx-auto px-4 pb-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="max-w-4xl mx-auto px-4 pb-32 sm:pb-8">
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
           {currentQuestion.type === 'multiple_choice' ? (
             <MultipleChoiceQuestion
               question={currentQuestion}
@@ -223,41 +223,85 @@ const StudySession = () => {
             />
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-            <div className="flex space-x-3">
+          {/* Action Buttons - фиксированные внизу для мобильных */}
+          <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+            {/* Для мобильных - кнопки в колонку, все по центру */}
+            <div className="sm:hidden space-y-3">
+              {/* Подсказка - если есть */}
               {currentQuestion.type === 'text_input' && !showHint && (
                 <button
                   onClick={handleGetHint}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                  className="w-full px-4 py-3 text-sm bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors font-medium"
                 >
                   💡 Подсказка
                 </button>
               )}
-              <button
-                onClick={handleSkip}
-                className="px-4 py-2 text-sm text-red-600 hover:text-red-700 transition-colors"
-              >
-              Пропустить
-              </button>
+
+              {!feedback ? (
+                <>
+                  {/* Кнопка "Ответить" - основная */}
+                  <button
+                    onClick={handleCheckAnswer}
+                    disabled={isChecking || (currentQuestion.type === 'multiple_choice' ? !selectedAnswer : !textAnswer)}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  >
+                    {isChecking ? 'Проверка...' : 'Ответить'}
+                  </button>
+
+                  {/* Кнопка "Пропустить" - по центру, на всю ширину */}
+                  <button
+                    onClick={handleSkip}
+                    className="w-full px-4 py-3 text-sm text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors font-medium"
+                  >
+                    Пропустить
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleNextQuestion}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium text-base shadow-lg"
+                >
+                  {currentQuestionIndex < questions.length - 1 ? 'Следующий вопрос →' : 'Завершить'}
+                </button>
+              )}
             </div>
 
-            {!feedback ? (
-              <button
-                onClick={handleCheckAnswer}
-                disabled={isChecking || (currentQuestion.type === 'multiple_choice' ? !selectedAnswer : !textAnswer)}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isChecking ? 'Проверка...' : 'Ответить'}
-              </button>
-            ) : (
-              <button
-                onClick={handleNextQuestion}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium"
-              >
-                {currentQuestionIndex < questions.length - 1 ? 'Следующий вопрос →' : 'Завершить'}
-              </button>
-            )}
+            {/* Для десктопа - кнопки в ряд */}
+            <div className="hidden sm:flex justify-between items-center">
+              <div className="flex space-x-3">
+                {currentQuestion.type === 'text_input' && !showHint && (
+                  <button
+                    onClick={handleGetHint}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                  >
+                    💡 Подсказка
+                  </button>
+                )}
+                <button
+                  onClick={handleSkip}
+                  className="px-4 py-2 text-sm text-red-600 hover:text-red-700 transition-colors"
+                >
+                Пропустить
+                </button>
+              </div>
+
+              {!feedback ? (
+                <button
+                  onClick={handleCheckAnswer}
+                  disabled={isChecking || (currentQuestion.type === 'multiple_choice' ? !selectedAnswer : !textAnswer)}
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isChecking ? 'Проверка...' : 'Ответить'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleNextQuestion}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium"
+                >
+                  {currentQuestionIndex < questions.length - 1 ? 'Следующий вопрос →' : 'Завершить'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
