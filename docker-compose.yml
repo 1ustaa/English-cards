@@ -12,6 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./config/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
     networks:
       - english-cards-network
     healthcheck:
@@ -19,6 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
 
   # Backend + Frontend
   web:
