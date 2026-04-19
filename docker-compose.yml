@@ -21,7 +21,7 @@ services:
       timeout: 5s
       retries: 5
 
-command: ["postgres", "-c", "listen_addresses=*", "-c", "logging_collector=off"]
+    command: ["postgres", "-c", "listen_addresses=*", "-c", "logging_collector=off"]
 
   # Backend + Frontend
   web:
