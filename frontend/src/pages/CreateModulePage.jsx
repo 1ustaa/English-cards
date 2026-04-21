@@ -95,7 +95,7 @@ const CreateModulePage = () => {
           </div>
 
           {/* Публичность */}
-          <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+          {/* <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
             <input
               type="checkbox"
               id="is_public"
@@ -112,8 +112,8 @@ const CreateModulePage = () => {
                 Публичные модули доступны другим пользователям для изучения
               </p>
             </div>
-          </div>
-        </div>
+          </div> */}
+        </div> 
 
         {/* Кнопки */}
         <div className="flex space-x-4 mt-8 pt-6 border-t border-gray-200">
