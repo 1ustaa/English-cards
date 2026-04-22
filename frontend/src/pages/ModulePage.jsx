@@ -43,9 +43,55 @@ const ModulePage = () => {
       }
     };
 
+
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentCardIndex, isFlipped, module]);
+
+  // Обработчик свайпов для мобильных
+  useEffect(() => {
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const SWIPE_THRESHOLD = 50; // Минимальная дистанция свайпа в пикселях
+
+    const handleTouchStart = (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    };
+
+    const handleTouchEnd = (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipeGesture();
+    };
+
+    const handleSwipeGesture = () => {
+      const diff = touchStartX - touchEndX;
+
+      if (Math.abs(diff) < SWIPE_THRESHOLD) return; // Слишком короткий свайп
+
+      if (diff > 0) {
+        // Свайп влево → следующая карточка
+        handleNext();
+      } else {
+        // Свайп вправо → предыдущая карточка
+        handlePrev();
+      }
+    };
+
+    // Применяем обработчики только к области карточки
+    const cardElement = document.querySelector('.flip-card');
+    if (cardElement) {
+      cardElement.addEventListener('touchstart', handleTouchStart, { passive: true });
+      cardElement.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+
+    return () => {
+      if (cardElement) {
+        cardElement.removeEventListener('touchstart', handleTouchStart);
+        cardElement.removeEventListener('touchend', handleTouchEnd);
+      }
+    };
+  }, [module, currentCardIndex]); // Зависимости для актуальных данных
 
   const loadModule = async () => {
     try {
@@ -81,11 +127,11 @@ const ModulePage = () => {
 
   const handleSpeak = (e) => {
     e.stopPropagation(); // Чтобы не переворачивать карточку
-    
+
     if (!currentCard?.term) {
       return;
     }
-    
+
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(currentCard.term);
       utterance.lang = 'en-US'; // Английский язык
@@ -99,7 +145,7 @@ const ModulePage = () => {
     if (!confirm('Вы уверены, что хотите удалить этот модуль? Все карточки будут удалены.')) {
       return;
     }
-    
+
     try {
       await deleteModule(id);
       toast.success('Модуль удалён');
@@ -179,7 +225,7 @@ const ModulePage = () => {
             className="flip-card w-full max-w-md h-64 sm:h-80 cursor-pointer"
             onClick={handleFlip}
           >
-            <div 
+            <div
               className="flip-card-inner relative w-full h-full"
               style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
             >

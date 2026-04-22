@@ -291,7 +291,7 @@ const EditCardsPage = () => {
 
       {/* Кнопка добавления внизу */}
       {cards.length > 0 && (
-        <div className="mt-6 sm:mt-8 text-center">
+        <div className="mt-6 sm:mt-8 mb-20 sm:mb-24 text-center">
           <button
             onClick={handleAddCard}
             className="bg-green-600 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base font-medium inline-flex items-center"
